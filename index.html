@@ -125,6 +125,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .crew-comment-input{flex:1;font-family:inherit;font-size:11px;padding:5px 7px;border:1px solid #D8D8D0;border-radius:5px;outline:none}
 .crew-comment-btn{background:#4A90D9;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
 .crew-comment-btn:hover{background:#3A7BC0}
+.crew-session-block{border:1px solid #E0E0D8;border-radius:10px;padding:12px 14px;margin-bottom:14px;background:#fff}
+.crew-session-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid #F0F0E8}
 @media(max-width:760px){.cards{grid-template-columns:1fr}}
 .pre-block{background:#F0F4FF;border-radius:6px;padding:8px 10px;margin-bottom:8px;border:1px solid #D8E4F8}
 .pre-head{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4A6FA5;margin-bottom:7px}
@@ -1117,81 +1119,69 @@ function crewTrendChart(){
     ${legend}
   </svg>`;
 }
-function crewSessionsTable(){
+function crewSessionBlock(wi,day,w,c,aSeats,bSeats){
+  const ds=DAYS[day];
+  const comments=(c.comments||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const commentsHtml = comments.length
+    ? comments.map(cm=>`<div class="crew-comment-item">
+        <button class="crew-comment-del" onclick="deleteCrewComment(${wi},'${day}',${cm.id})" title="Remove">✕</button>
+        <span class="crew-comment-who">${esc(cm.who)}</span>${esc(cm.text)}
+      </div>`).join('')
+    : `<div style="font-size:10px;color:#CCC;font-style:italic">No comments yet.</div>`;
+  return `<div class="crew-session-block">
+    <div class="crew-session-hdr">
+      <span class="pt-day" style="background:${ds.hbg};color:${ds.badge}">${ds.label}</span>
+      <span style="font-weight:700;font-size:12px">Week ${w.n}</span>
+      <span style="color:#888;font-size:10px">${esc(w.dates)}</span>
+    </div>
+    <div class="crew-grid" style="margin-top:9px">
+      <div class="crew-box">
+        <div class="crew-box-title">🛶 Crew A ${c.A.spd?`<span style="float:right;color:#185FA5">${esc(c.A.spd)} mph</span>`:''}</div>
+        <div style="font-size:11px;color:#333;margin-bottom:6px">${aSeats.length?esc(aSeats.join(', ')):'<span style="color:#CCC">No seats assigned</span>'}</div>
+        <div class="sl" style="margin-top:4px">Notes</div>
+        ${c.A.notes?`<div class="fv" style="font-size:10px;background:#FAFAF8;padding:5px 6px;border-radius:4px">${esc(c.A.notes).replace(/\n/g,'<br>')}</div>`:`<div style="font-size:10px;color:#CCC;font-style:italic">No notes</div>`}
+      </div>
+      <div class="crew-box">
+        <div class="crew-box-title">🛶 Crew B ${c.B.spd?`<span style="float:right;color:#B9540A">${esc(c.B.spd)} mph</span>`:''}</div>
+        <div style="font-size:11px;color:#333;margin-bottom:6px">${bSeats.length?esc(bSeats.join(', ')):'<span style="color:#CCC">No seats assigned</span>'}</div>
+        <div class="sl" style="margin-top:4px">Notes</div>
+        ${c.B.notes?`<div class="fv" style="font-size:10px;background:#FAFAF8;padding:5px 6px;border-radius:4px">${esc(c.B.notes).replace(/\n/g,'<br>')}</div>`:`<div style="font-size:10px;color:#CCC;font-style:italic">No notes</div>`}
+      </div>
+    </div>
+    <div class="crew-comments" style="margin-top:9px">
+      <div class="sl">Crew thoughts (${comments.length})</div>
+      ${commentsHtml}
+    </div>
+  </div>`;
+}
+function crewSessionsList(){
   const dayOrder=['mon','thu','sat'];
-  const rows=[];
+  const blocks=[];
   W.forEach((w,wi)=>{
     dayOrder.forEach(day=>{
       const c=crewData[crewKey(wi,day)];
       if(!c) return;
       const aSeats=(c.A.seats||[]).map(s=>paddlerName(s)).filter(Boolean);
       const bSeats=(c.B.seats||[]).map(s=>paddlerName(s)).filter(Boolean);
-      if(!aSeats.length && !bSeats.length && !c.A.spd && !c.B.spd && !(c.comments&&c.comments.length)) return;
-      rows.push({wi,day,w,c,aSeats,bSeats});
+      if(!aSeats.length && !bSeats.length && !c.A.spd && !c.B.spd && !c.A.notes && !c.B.notes && !(c.comments&&c.comments.length)) return;
+      blocks.push(crewSessionBlock(wi,day,w,c,aSeats,bSeats));
     });
   });
-  if(!rows.length) return `<div class="pt-empty">No crew assignments logged yet</div>`;
-  const body=rows.map(r=>{
-    const ds=DAYS[r.day];
-    return `<tr class="pt-row">
-      <td class="pt-cell pt-wk">W${r.w.n}</td>
-      <td class="pt-cell"><span class="pt-day" style="background:${ds.hbg};color:${ds.badge}">${ds.label}</span></td>
-      <td class="pt-cell" style="font-size:10px;color:#888">${esc(r.w.dates)}</td>
-      <td class="pt-cell" style="white-space:normal;max-width:200px;font-size:10px">${r.aSeats.length?esc(r.aSeats.join(', ')):'<span style="color:#CCC">—</span>'}</td>
-      <td class="pt-cell" style="font-weight:700">${r.c.A.spd?esc(r.c.A.spd)+' mph':'—'}</td>
-      <td class="pt-cell" style="white-space:normal;max-width:200px;font-size:10px">${r.bSeats.length?esc(r.bSeats.join(', ')):'<span style="color:#CCC">—</span>'}</td>
-      <td class="pt-cell" style="font-weight:700">${r.c.B.spd?esc(r.c.B.spd)+' mph':'—'}</td>
-      <td class="pt-cell" style="text-align:center">${(r.c.comments||[]).length||'—'}</td>
-    </tr>`;
-  }).join('');
-  return `<div style="overflow-x:auto">
-    <table class="pt-table">
-      <thead><tr>
-        <th class="pt-th">Wk</th><th class="pt-th">Day</th><th class="pt-th">Dates</th>
-        <th class="pt-th">Crew A</th><th class="pt-th">A Speed</th>
-        <th class="pt-th">Crew B</th><th class="pt-th">B Speed</th>
-        <th class="pt-th">💬</th>
-      </tr></thead>
-      <tbody>${body}</tbody>
-    </table>
-  </div>`;
-}
-function crewAllCommentsFeed(){
-  const dayOrder=['mon','thu','sat'];
-  const items=[];
-  W.forEach((w,wi)=>{
-    dayOrder.forEach(day=>{
-      const c=crewData[crewKey(wi,day)];
-      if(!c||!c.comments) return;
-      c.comments.forEach(cm=>items.push({...cm,wi,day,w}));
-    });
-  });
-  items.sort((a,b)=>(b.ts||0)-(a.ts||0));
-  if(!items.length) return `<div style="font-size:11px;color:#CCC;font-style:italic;padding:10px 0">No crew comments yet.</div>`;
-  return items.map(cm=>{
-    const ds=DAYS[cm.day];
-    return `<div class="crew-comment-item" style="margin-bottom:6px">
-      <button class="crew-comment-del" onclick="deleteCrewComment(${cm.wi},'${cm.day}',${cm.id})" title="Remove">✕</button>
-      <span class="crew-comment-who">${esc(cm.who)}</span>
-      <span style="color:#999;font-size:10px">· W${cm.w.n} ${esc(ds.label)}</span><br>
-      ${esc(cm.text)}
-    </div>`;
-  }).join('');
+  if(!blocks.length) return `<div class="pt-empty">No crew assignments logged yet</div>`;
+  return blocks.reverse().join('');
 }
 function renderCrews(){
   document.getElementById('cards').innerHTML=`<div class="prof-page" style="display:block">
     <div class="prof-main" style="padding:14px">
       <div class="chart-lbl" style="margin-bottom:10px">🛶 Crew Assignments — Season Overview</div>
       <div class="chart-inner" style="margin-bottom:18px">${crewTrendChart()}</div>
-      <div class="chart-lbl" style="margin-bottom:8px">Sessions</div>
-      ${crewSessionsTable()}
-      <div class="chart-lbl" style="margin:18px 0 8px">All crew thoughts</div>
-      ${crewAllCommentsFeed()}
+      <div class="chart-lbl" style="margin-bottom:10px">Sessions — notes &amp; crew thoughts</div>
+      ${crewSessionsList()}
     </div>
   </div>`;
   const sp=document.getElementById('season-summary');
   if(sp) sp.style.display='none';
-  document.getElementById('hint').textContent='Crew lineups, speed & feedback across the season — coach only';
+  document.getElementById('hint').textContent='Crew lineups, speed, notes & feedback across the season — coach only';
 }
 function buildCard(wk,day){
   const ds=DAYS[day],s=wkData[wk][day],isC=mode==='coach';
