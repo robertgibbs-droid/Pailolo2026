@@ -101,6 +101,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .res-link{color:#4A90D9;text-decoration:none;word-break:break-all}
 .res-link:hover{text-decoration:underline}
 .hint{text-align:center;font-size:10px;color:#AAA;padding:5px 16px 14px}
+.crew-section{border-top:2px dashed #E0E0D8;margin-top:8px;padding:9px 12px 10px;background:#F5F8FB}
+.crew-head{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1E5A8A;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.crew-head::after{content:'';flex:1;height:1px;background:#D8E4F0}
+.crew-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:2px}
+@media(max-width:600px){.crew-grid{grid-template-columns:1fr}}
+.crew-box{background:#fff;border:1px solid #DCE6EE;border-radius:8px;padding:8px 9px}
+.crew-box-title{font-size:10px;font-weight:700;color:#0D1B2A;margin-bottom:6px}
+.crew-seat-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.crew-seat-n{width:16px;height:16px;border-radius:50%;background:#EBF0FB;color:#185FA5;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.crew-seat-select{flex:1;font-family:inherit;font-size:11px;padding:3px 5px;border:1px solid #D8D8D0;border-radius:4px;background:#fff;color:#1a1a1a;outline:none;min-width:0}
+.crew-seat-ro{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px}
+.crew-seat-name{color:#333}
+.crew-spd-row{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed #EEF2F6}
+.crew-spd-input{width:60px;font-family:inherit;font-size:11px;padding:3px 6px;border:1px solid #D8D8D0;border-radius:4px;outline:none}
+.crew-notes-ta{width:100%;font-family:inherit;font-size:10px;line-height:1.5;padding:4px 6px;border:1px solid #D8D8D0;border-radius:4px;margin-top:5px;resize:vertical;outline:none;min-height:32px}
+.crew-comments{margin-top:7px}
+.crew-comment-item{background:#fff;border:1px solid #EEF2F6;border-radius:6px;padding:5px 8px;margin-bottom:5px;font-size:11px;line-height:1.5}
+.crew-comment-who{font-weight:700;color:#185FA5;margin-right:5px}
+.crew-comment-del{background:none;border:none;color:#CCC;cursor:pointer;font-size:11px;float:right}
+.crew-comment-del:hover{color:#E74C3C}
+.crew-comment-add{display:flex;gap:6px;margin-top:6px}
+.crew-comment-input{flex:1;font-family:inherit;font-size:11px;padding:5px 7px;border:1px solid #D8D8D0;border-radius:5px;outline:none}
+.crew-comment-btn{background:#4A90D9;color:#fff;border:none;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.crew-comment-btn:hover{background:#3A7BC0}
 @media(max-width:760px){.cards{grid-template-columns:1fr}}
 .pre-block{background:#F0F4FF;border-radius:6px;padding:8px 10px;margin-bottom:8px;border:1px solid #D8E4F8}
 .pre-head{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4A6FA5;margin-bottom:7px}
@@ -429,6 +453,7 @@ let wkData=JSON.parse(JSON.stringify(W));
 let pd={};
 let profileStore={};
 let ttData={};
+let crewData={};
 let workoutLog=[];
 let deletedWorkoutIds=new Set();
 let workoutDraft=null;
@@ -606,9 +631,9 @@ function gPad(p,wk,day,f,def){return pd[pKey(p,wk,day,f)]??def;}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 // ── FIRESTORE STORAGE ─────────────────────────────────────────────────────
 let saveTimer=null;
-let pdDirty=false, wkDirty=false, profDirty=false, ttDirty=false, wLogDirty=false, rosterDirty=false;
+let pdDirty=false, wkDirty=false, profDirty=false, ttDirty=false, wLogDirty=false, rosterDirty=false, crewDirty=false;
 let savingKind=null;
-let lastSavedLogs=null, lastSavedWorkouts=null, lastSavedTT=null, lastSavedWLog=null, lastSavedRoster=null, lastSaveError=null;
+let lastSavedLogs=null, lastSavedWorkouts=null, lastSavedTT=null, lastSavedWLog=null, lastSavedRoster=null, lastSavedCrew=null, lastSaveError=null;
 function timeAgo(d){
   if(!d) return '';
   const s=Math.floor((Date.now()-d.getTime())/1000);
@@ -639,6 +664,7 @@ function scheduleSave(kind){
   if(kind==='tt') ttDirty=true;
   if(kind==='wlog') wLogDirty=true;
   if(kind==='roster') rosterDirty=true;
+  if(kind==='crew') crewDirty=true;
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>doSave(kind),350);
 }
@@ -685,6 +711,14 @@ async function doSave(kind){
     const ok=await fsSave('extra-roster',{extra:extraRoster,deleted:[...deletedPaddlerKeys]});
     if(ok){ rosterDirty=false; lastSavedRoster=new Date(); } else lastSaveError='roster';
   }
+  if(kind==='crew'){
+    let merged=crewData;
+    const remote=await fsLoad('crews');
+    if(remote){ try{ merged={...JSON.parse(remote), ...crewData}; }catch(e){} }
+    crewData=merged;
+    const ok=await fsSave('crews',crewData);
+    if(ok){ crewDirty=false; lastSavedCrew=new Date(); } else lastSaveError='crew';
+  }
   savingKind=null;
   render();
 }
@@ -709,13 +743,14 @@ async function loadAll(){
     setConn(false);
     return;
   }
-  const [w,p,pr,tt,wl,ex]=await Promise.all([fsLoad('workouts'),fsLoad('paddler-logs'),fsLoad('profiles'),fsLoad('timetrials'),fsLoad('workout-log'),fsLoad('extra-roster')]);
+  const [w,p,pr,tt,wl,ex,cr]=await Promise.all([fsLoad('workouts'),fsLoad('paddler-logs'),fsLoad('profiles'),fsLoad('timetrials'),fsLoad('workout-log'),fsLoad('extra-roster'),fsLoad('crews')]);
   if(w){ try{ wkData=JSON.parse(w); }catch(e){} }
   if(p){ try{ pd=JSON.parse(p); }catch(e){} }
   if(pr){ try{ profileStore=JSON.parse(pr); }catch(e){} }
   if(tt){ try{ ttData=JSON.parse(tt); }catch(e){} }
   if(wl){ try{ workoutLog=JSON.parse(wl); }catch(e){} }
   if(ex){ try{ const parsed=JSON.parse(ex); extraRoster=parsed.extra||[]; deletedPaddlerKeys=new Set(parsed.deleted||[]); rebuildRoster(); }catch(e){} }
+  if(cr){ try{ crewData=JSON.parse(cr); }catch(e){} }
   curPaddler=localStorage.getItem('pal_who')||'';
   dataLoaded=true;
   initSelect();
@@ -747,6 +782,10 @@ function attachListeners(){
   TEAM.doc('extra-roster').onSnapshot(snap=>{
     if(!snap.exists||rosterDirty) return;
     try{ const parsed=JSON.parse(snap.data().json); extraRoster=parsed.extra||[]; deletedPaddlerKeys=new Set(parsed.deleted||[]); rebuildRoster(); if(dataLoaded) render(); }catch(e){}
+  },()=>setConn(false));
+  TEAM.doc('crews').onSnapshot(snap=>{
+    if(!snap.exists||crewDirty) return;
+    try{ crewData=JSON.parse(snap.data().json); if(dataLoaded) render(); }catch(e){}
   },()=>setConn(false));
 }
 // ── TIME TRIAL HELPERS ────────────────────────────────────────────────────
@@ -916,6 +955,131 @@ function rosterView(wk,day){
     <div class="roster-grid">${rows}</div>
   </div>`;
 }
+// ── CREW ASSIGNMENTS ──────────────────────────────────────────────────────
+function crewKey(wk,day){ return `${wk}_${day}`; }
+function getCrew(wk,day){
+  const k=crewKey(wk,day);
+  if(!crewData[k]) crewData[k]={A:{seats:['','','','','',''],spd:'',notes:''},B:{seats:['','','','','',''],spd:'',notes:''},comments:[]};
+  if(!crewData[k].A) crewData[k].A={seats:['','','','','',''],spd:'',notes:''};
+  if(!crewData[k].B) crewData[k].B={seats:['','','','','',''],spd:'',notes:''};
+  if(!crewData[k].comments) crewData[k].comments=[];
+  return crewData[k];
+}
+function paddlerName(key){
+  if(!key) return '';
+  const r=ROSTER.find(x=>rKey(x)===key);
+  return r?`${r.f} ${r.l}`:key;
+}
+window.setCrewSeat=function(wk,day,letter,seatIdx,val){
+  const c=getCrew(wk,day);
+  c[letter].seats[seatIdx]=val;
+  scheduleSave('crew');
+  render();
+};
+window.setCrewField=function(wk,day,letter,field,val){
+  const c=getCrew(wk,day);
+  c[letter][field]=val;
+  scheduleSave('crew');
+};
+window.handleCrewSeatChange=function(el,wk,day,letter,seatIdx){
+  if(el.value==='__new__'){
+    const name=prompt('New paddler name (First Last):');
+    if(!name||!name.trim()){ render(); return; }
+    const parts=name.trim().split(/\s+/);
+    const f=parts[0], l=parts.slice(1).join(' ')||'';
+    const key=`${f}_${l}`;
+    if(!ROSTER.some(r=>rKey(r)===key)){
+      extraRoster.push({f,l});
+      rebuildRoster();
+      scheduleSave('roster');
+    }
+    window.setCrewSeat(wk,day,letter,seatIdx,key);
+    return;
+  }
+  window.setCrewSeat(wk,day,letter,seatIdx,el.value);
+};
+window.addCrewComment=function(wk,day){
+  const id=`crewcomment_${wk}_${day}`;
+  const el=document.getElementById(id);
+  if(!el||!el.value.trim()) return;
+  const who = mode==='coach' ? 'Coach' : (paddlerName(curPaddler)||curPaddler);
+  const c=getCrew(wk,day);
+  c.comments.push({id:Date.now(),who,text:el.value.trim(),ts:Date.now()});
+  el.value='';
+  scheduleSave('crew');
+  render();
+};
+window.deleteCrewComment=function(wk,day,cid){
+  const c=getCrew(wk,day);
+  c.comments=(c.comments||[]).filter(x=>x.id!==cid);
+  scheduleSave('crew');
+  render();
+};
+function crewSeatOptions(selected){
+  return ROSTER.map(r=>{
+    const k=rKey(r);
+    return `<option value="${esc(k)}"${selected===k?' selected':''}>${esc(r.f)} ${esc(r.l)}</option>`;
+  }).join('');
+}
+function crewSeatRow(wk,day,letter,seatIdx,seatVal,isC){
+  if(!isC){
+    const name=paddlerName(seatVal);
+    return `<div class="crew-seat-ro"><span class="crew-seat-n">${seatIdx+1}</span><span class="crew-seat-name">${name?esc(name):'<span style="color:#CCC">— open —</span>'}</span></div>`;
+  }
+  return `<div class="crew-seat-row">
+    <span class="crew-seat-n">${seatIdx+1}</span>
+    <select class="crew-seat-select" onchange="handleCrewSeatChange(this,${wk},'${day}','${letter}',${seatIdx})">
+      <option value="">— empty —</option>
+      ${crewSeatOptions(seatVal)}
+      <option value="__new__">➕ Add new paddler…</option>
+    </select>
+  </div>`;
+}
+function renderCrewBox(wk,day,letter,isC){
+  const crew=getCrew(wk,day);
+  const box=crew[letter];
+  const seatsHtml=box.seats.map((val,i)=>crewSeatRow(wk,day,letter,i,val,isC)).join('');
+  const spdField=isC
+    ? `<input class="crew-spd-input" type="text" placeholder="6.5" value="${esc(box.spd)}" onchange="setCrewField(${wk},'${day}','${letter}','spd',this.value)">`
+    : `<span style="font-weight:700;font-size:12px">${box.spd?esc(box.spd):'—'}</span>`;
+  const notesField=isC
+    ? `<textarea class="crew-notes-ta" placeholder="Crew notes — lineup rationale, changes, etc." onchange="setCrewField(${wk},'${day}','${letter}','notes',this.value)">${esc(box.notes)}</textarea>`
+    : (box.notes?`<div class="fv" style="font-size:10px;margin-top:5px;padding:3px 0">${esc(box.notes).replace(/\n/g,'<br>')}</div>`:'');
+  return `<div class="crew-box">
+    <div class="crew-box-title">🛶 Crew ${letter}</div>
+    ${seatsHtml}
+    <div class="crew-spd-row"><span class="stat-label" style="min-width:auto">Avg speed</span>${spdField}<span class="stat-unit">mph</span></div>
+    ${notesField}
+  </div>`;
+}
+function crewCommentsHtml(wk,day){
+  const crew=getCrew(wk,day);
+  const canPost = mode==='coach' || !!curPaddler;
+  const list=(crew.comments||[]).slice().reverse().map(c=>{
+    const delBtn=mode==='coach'?`<button class="crew-comment-del" onclick="deleteCrewComment(${wk},'${day}',${c.id})" title="Remove">✕</button>`:'';
+    return `<div class="crew-comment-item">${delBtn}<span class="crew-comment-who">${esc(c.who)}</span>${esc(c.text)}</div>`;
+  }).join('');
+  const addRow = canPost ? `<div class="crew-comment-add">
+      <input class="crew-comment-input" id="crewcomment_${wk}_${day}" type="text" placeholder="Add your thoughts on this practice…" onkeydown="if(event.key==='Enter'){addCrewComment(${wk},'${day}')}">
+      <button class="crew-comment-btn" onclick="addCrewComment(${wk},'${day}')">Post</button>
+    </div>` : `<div style="font-size:10px;color:#AAA;font-style:italic;margin-top:4px">Select your name above to add your thoughts.</div>`;
+  return `<div class="crew-comments">
+    <div class="sl">Crew thoughts</div>
+    ${list||'<div style="font-size:10px;color:#CCC;font-style:italic;margin:4px 0">No comments yet — be the first to share.</div>'}
+    ${addRow}
+  </div>`;
+}
+function crewSection(wk,day){
+  const isC=mode==='coach';
+  return `<div class="crew-section">
+    <div class="crew-head">🛶 Crew Assignments</div>
+    <div class="crew-grid">
+      ${renderCrewBox(wk,day,'A',isC)}
+      ${renderCrewBox(wk,day,'B',isC)}
+    </div>
+    ${crewCommentsHtml(wk,day)}
+  </div>`;
+}
 function buildCard(wk,day){
   const ds=DAYS[day],s=wkData[wk][day],isC=mode==='coach';
   const wf=isC?`
@@ -951,7 +1115,7 @@ function buildCard(wk,day){
       </div>
       <div style="font-size:11px;font-weight:600;color:#1a1a1a">${isC?fEdit(wk,day,'ti',false):fRO(wk,day,'ti')}</div>
     </div>
-    <div class="card-body">${wf}${resources}${bottom}</div>
+    <div class="card-body">${wf}${resources}${crewSection(wk,day)}${bottom}</div>
   </div>`;
 }
 let curProfile=ROSTER.length?rKey(ROSTER[0]):'';
@@ -2177,4 +2341,3 @@ loadAll();
 </div>
 </body>
 </html>
-
