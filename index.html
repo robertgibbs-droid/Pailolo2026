@@ -300,6 +300,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <button class="print-btn" onclick="printWeek()">🖨️ Print This Week</button>
 </div>
 <div id="tt-nav"></div>
+<datalist id="crewRosterList"></datalist>
 <div class="cards" id="cards"><div class="loading-box">Loading team data…</div></div>
 <div class="hint" id="hint"></div>
 
@@ -981,23 +982,6 @@ window.setCrewField=function(wk,day,letter,field,val){
   c[letter][field]=val;
   scheduleSave('crew');
 };
-window.handleCrewSeatChange=function(el,wk,day,letter,seatIdx){
-  if(el.value==='__new__'){
-    const name=prompt('New paddler name (First Last):');
-    if(!name||!name.trim()){ render(); return; }
-    const parts=name.trim().split(/\s+/);
-    const f=parts[0], l=parts.slice(1).join(' ')||'';
-    const key=`${f}_${l}`;
-    if(!ROSTER.some(r=>rKey(r)===key)){
-      extraRoster.push({f,l});
-      rebuildRoster();
-      scheduleSave('roster');
-    }
-    window.setCrewSeat(wk,day,letter,seatIdx,key);
-    return;
-  }
-  window.setCrewSeat(wk,day,letter,seatIdx,el.value);
-};
 window.addCrewComment=function(wk,day){
   const id=`crewcomment_${wk}_${day}`;
   const el=document.getElementById(id);
@@ -1015,12 +999,22 @@ window.deleteCrewComment=function(wk,day,cid){
   scheduleSave('crew');
   render();
 };
-function crewSeatOptions(selected){
-  return ROSTER.map(r=>{
-    const k=rKey(r);
-    return `<option value="${esc(k)}"${selected===k?' selected':''}>${esc(r.f)} ${esc(r.l)}</option>`;
-  }).join('');
-}
+window.handleCrewSeatInput=function(el,wk,day,letter,seatIdx){
+  const typed=el.value.trim();
+  if(!typed){ window.setCrewSeat(wk,day,letter,seatIdx,''); return; }
+  const match=ROSTER.find(r=>`${r.f} ${r.l}`.toLowerCase()===typed.toLowerCase());
+  if(match){ window.setCrewSeat(wk,day,letter,seatIdx,rKey(match)); return; }
+  // Not an existing roster member — add as a new paddler
+  const parts=typed.split(/\s+/);
+  const f=parts[0], l=parts.slice(1).join(' ')||'';
+  const key=`${f}_${l}`;
+  if(!ROSTER.some(r=>rKey(r)===key)){
+    extraRoster.push({f,l});
+    rebuildRoster();
+    scheduleSave('roster');
+  }
+  window.setCrewSeat(wk,day,letter,seatIdx,key);
+};
 function crewSeatRow(wk,day,letter,seatIdx,seatVal,isC){
   if(!isC){
     const name=paddlerName(seatVal);
@@ -1028,11 +1022,7 @@ function crewSeatRow(wk,day,letter,seatIdx,seatVal,isC){
   }
   return `<div class="crew-seat-row">
     <span class="crew-seat-n">${seatIdx+1}</span>
-    <select class="crew-seat-select" onchange="handleCrewSeatChange(this,${wk},'${day}','${letter}',${seatIdx})">
-      <option value="">— empty —</option>
-      ${crewSeatOptions(seatVal)}
-      <option value="__new__">➕ Add new paddler…</option>
-    </select>
+    <input class="crew-seat-select" type="text" list="crewRosterList" autocomplete="off" placeholder="Type a name…" value="${esc(paddlerName(seatVal))}" onchange="handleCrewSeatInput(this,${wk},'${day}','${letter}',${seatIdx})">
   </div>`;
 }
 function renderCrewBox(wk,day,letter,isC){
@@ -2234,6 +2224,8 @@ function seasonSummary(){
 }
 function render(){
   if(!dataLoaded) return;
+  const crl=document.getElementById('crewRosterList');
+  if(crl) crl.innerHTML=ROSTER.map(r=>`<option value="${esc(r.f+' '+r.l)}">`).join('');
   const w=wkData[curWk],ph=PH[w.pk];
   const showWeekNav=(view==='workouts');
   document.getElementById('weekNavBar').style.display=showWeekNav?'flex':'none';
