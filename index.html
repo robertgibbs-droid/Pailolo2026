@@ -341,7 +341,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="countdown-bar">
   <div class="countdown-flag">🏁</div>
   <div class="countdown-main">
-    <div class="countdown-label">Race Day — Molokai to Maui</div>
+    <div class="countdown-label">Race Day — Maui to Molokai</div>
     <div class="countdown-numbers" id="countdown-numbers">—</div>
   </div>
   <button class="print-btn" onclick="printWeek()">🖨️ Print This Week</button>
@@ -372,6 +372,15 @@ if(fbReady){
 }
 // ── RACE COUNTDOWN ────────────────────────────────────────────────────────
 const RACE_DATE=new Date('2026-09-19T07:00:00-10:00');
+const SEASON_START=new Date(2026,5,29); // matches W[0].dates start (Jun 29)
+function weekIndexForDate(dateStr){
+  if(!dateStr) return null;
+  const d=new Date(dateStr+'T00:00:00');
+  if(isNaN(d)) return null;
+  const wi=Math.floor((d-SEASON_START)/86400000/7);
+  if(wi<0||wi>=W.length) return null;
+  return wi;
+}
 function updateCountdown(){
   const el=document.getElementById('countdown-numbers');
   if(!el) return;
@@ -442,9 +451,13 @@ const ROSTER_STATIC=[
 ];
 let extraRoster=[];
 let deletedPaddlerKeys=new Set();
-let ROSTER=[...ROSTER_STATIC];
-function rebuildRoster(){ ROSTER=[...ROSTER_STATIC,...extraRoster].filter(r=>!deletedPaddlerKeys.has(`${r.f}_${r.l}`)); }
+function sortRoster(arr){ return arr.slice().sort((a,b)=>(`${a.f} ${a.l}`).localeCompare(`${b.f} ${b.l}`,undefined,{sensitivity:'base'})); }
+let ROSTER=sortRoster(ROSTER_STATIC);
+function rebuildRoster(){ ROSTER=sortRoster([...ROSTER_STATIC,...extraRoster].filter(r=>!deletedPaddlerKeys.has(`${r.f}_${r.l}`))); }
 const rKey=p=>`${p.f}_${p.l}`;
+function nonTestRoster(){ return ROSTER.filter(r=>!r.test); }
+function isTestKey(key){ const r=ROSTER.find(x=>rKey(x)===key); return !!(r&&r.test); }
+function testBadge(r){ return r&&r.test?' <span style="background:#F5C518;color:#3A2E00;font-size:8px;font-weight:800;letter-spacing:.04em;padding:1px 5px;border-radius:3px;vertical-align:middle;margin-left:4px">TEST</span>':''; }
 const W=[
 {n:0,dates:"Jun 29 – Jul 5",pk:"p2",
 mon:{ti:"Anaerobic capacity — LA work-relief",tg:"LA work-relief",wu:"Easy paddle, build to RPE 3-4",ms:"×40  →  20 sec RPE 9-10 / 20 sec RPE 1-2\nRest  →  3 min RPE 1-2 (×3 groups)\nThen  →  Zone 2 RPE 3-4\n+ Threshold laps RPE 5-6",cd:"10 min RPE 1-2",rk:"RPE 9-10: Heavily stressed. Gasping. Sweating heavily.\nRPE 5-6: Hard work. HR up. CO₂ build-up.\nRPE 3-4: Working. Feel warmer. HR up.\nRPE 1-2: Very relaxed. Conversational.",to:"≈ 60 min · 24 total work intervals"},
@@ -493,7 +506,7 @@ sat:{ti:"Aerobic threshold — easy flush",tg:"Easy flush · not a workout",wu:"
 {n:11,dates:"Sep 14 – Sep 19",pk:"rw",
 mon:{ti:"Aerobic capacity — activation",tg:"Activation · Mon Sep 14",wu:"20 min RPE 1-2",ms:"4 × (15 sec RPE 9-10 / 3 min RPE 1-2)\n[ATP-CP prime — wake fast-twitch, no fatigue]\nCheck all gear",cd:"Easy paddle home",rk:"RPE 9-10: Heavily stressed. Gasping.\nRPE 1-2: Very relaxed. Conversational.",to:"≈ 40 min · 4 sprints only"},
 thu:{ti:"Pre-race shakeout",tg:"Shakeout · Thu Sep 17",wu:"10 min RPE 1-2",ms:"3 × (15 sec RPE 8-9 / 3 min RPE 1-2)\nKeep it short and easy — legs should feel fresh\nFinal gear check · confirm race-day logistics",cd:"Easy paddle home",rk:"RPE 8-9: Stressed. Panting.\nRPE 1-2: Very relaxed. Conversational.",to:"≈ 30 min · light activation only"},
-sat:{ti:"Race day — Pailolo Challenge",tg:"🏆 Sat Sep 19 · RACE DAY",wu:"15-20 min RPE 1-2\n+ 2 × 15 sec RPE 9-10 pace touches",ms:"START  →  first 30-60 sec RPE 9-10 (ATP-CP)\nSETTLE  →  RPE 8-9 as HR climbs\nRACE PACE  →  RPE 7-8 all the way to Maui\n\nGoal: 3:30 · Trust your training",cd:"Recovery Sun Sep 20+\nEasy swim/walk · Hydrate · Celebrate\nNo paddling 5-7 days minimum",rk:"RPE 9-10: Start and tactical surges.\nRPE 7-8: Race pace — sustained 3.5 hrs.\nRPE 1-2: Warm-up pace.",to:"27 miles · Molokai → Maui · Goal: 3:30"}}
+sat:{ti:"Race day — Pailolo Challenge",tg:"🏆 Sat Sep 19 · RACE DAY",wu:"15-20 min RPE 1-2\n+ 2 × 15 sec RPE 9-10 pace touches",ms:"START  →  first 30-60 sec RPE 9-10 (ATP-CP)\nSETTLE  →  RPE 8-9 as HR climbs\nRACE PACE  →  RPE 7-8 all the way to Molokai\n\nGoal: 3:30 · Trust your training",cd:"Recovery Sun Sep 20+\nEasy swim/walk · Hydrate · Celebrate\nNo paddling 5-7 days minimum",rk:"RPE 9-10: Start and tactical surges.\nRPE 7-8: Race pace — sustained 3.5 hrs.\nRPE 1-2: Warm-up pace.",to:"27 miles · Maui → Molokai · Goal: 3:30"}}
 ];
 const PH={p2:{badge:'#993C1D',label:'Speed Endurance · Phase 2'},p3:{badge:'#185FA5',label:'Speed Peak · Phase 3'},tp:{badge:'#1E5631',label:'Taper'},rw:{badge:'#7B241C',label:'Race Week'}};
 const DAYS={mon:{label:'Monday',hbg:'#FEF0E8',badge:'#993C1D'},thu:{label:'Thursday',hbg:'#EBF0FB',badge:'#185FA5'},sat:{label:'Saturday',hbg:'#EBF6EC',badge:'#27500A'}};
@@ -668,6 +681,13 @@ function exerciseOptionsHTML(cat,selected){
     }).join('');
   }
   return (WEXLIB[cat]||[]).slice().sort((a,b)=>a.localeCompare(b)).map(w=>`<option value="${esc(w)}" ${selected===w?'selected':''}>${esc(w)}</option>`).join('');
+}
+function wexAllNames(cat){
+  if(WEXLIB_GROUPED[cat]) return Object.values(WEXLIB_GROUPED[cat]).flat().slice().sort((a,b)=>a.localeCompare(b));
+  return (WEXLIB[cat]||[]).slice().sort((a,b)=>a.localeCompare(b));
+}
+function wexDatalist(cat){
+  return `<datalist id="wexlist_${cat}">${wexAllNames(cat).map(w=>`<option value="${esc(w)}">`).join('')}</datalist>`;
 }
 let curWk=0, mode='paddler', curPaddler='', editF=null, view='workouts';
 let curTTTab='tt1';
@@ -982,19 +1002,19 @@ function rosterView(wk,day){
     const stravaBtn=url?`<a href="${esc(url)}" target="_blank" title="Strava" style="font-size:10px;color:#FC4C02;text-decoration:none" onclick="event.stopPropagation()">🔗</a>`:'';
     return `<div class="roster-row" onclick="sAtt('${key}',${wk},'${day}')" title="Click to toggle attendance" style="cursor:pointer">
       <div class="r-dot ${dotCls}"></div>
-      <div class="r-name">${r.f} ${r.l}</div>
+      <div class="r-name">${r.f} ${r.l}${testBadge(r)}</div>
       ${eDot}
       ${stravaBtn}
       ${stats.length?`<div class="roster-stats">${stats.map(s=>`<span class="r-stat">${s}</span>`).join('')}</div>`:''}
     </div>`;
   }).join('');
-  const attCount=ROSTER.filter(r=>gPad(rKey(r),wk,day,'att','')==='y').length;
-  const loggedCount=ROSTER.filter(r=>gPad(rKey(r),wk,day,'att','')!=='').length;
+  const attCount=nonTestRoster().filter(r=>gPad(rKey(r),wk,day,'att','')==='y').length;
+  const loggedCount=nonTestRoster().filter(r=>gPad(rKey(r),wk,day,'att','')!=='').length;
   return `<div class="roster-section">
     <div class="roster-head">
       Team attendance
       <span style="color:#27AE60;font-weight:700">${attCount} attended</span>
-      <span style="color:#AAA;font-weight:400">/ ${ROSTER.length} · ${loggedCount} logged</span>
+      <span style="color:#AAA;font-weight:400">/ ${nonTestRoster().length} · ${loggedCount} logged</span>
     </div>
     <div class="roster-legend">
       <span><span class="leg-dot" style="background:#27AE60"></span>Attended</span>
@@ -1064,7 +1084,7 @@ window.handleCrewSeatInput=function(el,wk,day,letter,seatIdx){
 };
 function crewSeatRow(wk,day,letter,seatIdx,seatVal,isC){
   if(!isC){
-    const name=paddlerName(seatVal);
+    const name=isTestKey(seatVal)?'':paddlerName(seatVal);
     return `<div class="crew-seat-ro"><span class="crew-seat-n">${seatIdx+1}</span><span class="crew-seat-name">${name?esc(name):'<span style="color:#CCC">— open —</span>'}</span></div>`;
   }
   return `<div class="crew-seat-row">
@@ -1527,7 +1547,7 @@ function renderProfile(){
     const clr=tot>0?(pct>=80?'#27AE60':pct>=60?'#F39C12':'#E74C3C'):'#CCC';
     const isSel=key===curProfile;
     return `<div class="pl-item${isSel?' pl-sel':''}" onclick="selProf('${key}')">
-      <span class="pl-name">${r.f} ${r.l}</span>
+      <span class="pl-name">${r.f} ${r.l}${testBadge(r)}</span>
       <span class="pl-att" style="color:${clr}">${tot}/${pos}</span>
       ${mode==='coach'?`<button onclick="event.stopPropagation();deletePaddlerFromRoster('${key}')" title="Remove paddler" style="background:none;border:none;color:#E74C3C;cursor:pointer;font-size:13px;padding:0 2px 0 6px;line-height:1">✕</button>`:''}
     </div>`;
@@ -1569,6 +1589,10 @@ function renderProfile(){
       ${mode==='coach'?`<div class="roster-add-box">
         <input id="newPaddlerFirst" placeholder="First name">
         <input id="newPaddlerLast" placeholder="Last name">
+        <label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#888;margin:5px 2px">
+          <input type="checkbox" id="newPaddlerTest" style="width:auto;margin:0">
+          Test paddler — coach-only, excluded from team stats
+        </label>
         <button class="save-btn" style="width:100%;font-size:10px;padding:6px" onclick="addPaddlerToRoster()">+ Add Paddler</button>
       </div>`:''}
     </div>
@@ -1634,9 +1658,12 @@ function renderProfile(){
 window.selProf=key=>{ curProfile=key; render(); };
 window.addPaddlerToRoster=function(){
   const fEl=document.getElementById('newPaddlerFirst'), lEl=document.getElementById('newPaddlerLast');
+  const tEl=document.getElementById('newPaddlerTest');
   const f=(fEl.value||'').trim(), l=(lEl.value||'').trim();
   if(!f||!l){ alert('Please enter both a first and last name.'); return; }
-  extraRoster.push({f,l});
+  const entry={f,l};
+  if(tEl&&tEl.checked) entry.test=true;
+  extraRoster.push(entry);
   rebuildRoster();
   scheduleSave('roster');
   render();
@@ -1695,7 +1722,7 @@ function renderSeasonTrends(){
     const tot=W.reduce((a,_,wi)=>a+['mon','thu','sat'].filter(d=>gPad(key,wi,d,'att')==='y').length,0);
     const isSel=key===curProfile;
     return `<div class="pl-item${isSel?' pl-sel':''}" onclick="selProf('${key}')">
-      <span class="pl-name">${r.f} ${r.l}</span>
+      <span class="pl-name">${r.f} ${r.l}${testBadge(r)}</span>
       <span class="pl-att" style="color:${tot>0?'#27AE60':'#CCC'}">${tot}</span>
     </div>`;
   }).join('');
@@ -2017,7 +2044,7 @@ function renderTimeTrials(){
     const cnt=getTTList(key,'tt1').length+getTTList(key,'maketp').length;
     const isSel=key===curProfile;
     return `<div class="pl-item${isSel?' pl-sel':''}" onclick="selProf('${key}')">
-      <span class="pl-name">${r.f} ${r.l}</span>
+      <span class="pl-name">${r.f} ${r.l}${testBadge(r)}</span>
       <span class="pl-att" style="color:${cnt>0?'#27AE60':'#CCC'}">${cnt}</span>
     </div>`;
   }).join('');
@@ -2040,38 +2067,33 @@ window.openWorkoutView=function(){
   else { view=viewBeforeWorkout||'workouts'; render(); }
 };
 window.newWorkoutDraft=function(){
-  workoutDraft={ id:null, paddler:curPaddler||'', date:new Date().toISOString().slice(0,10), category:'strength', activity:'', customActivity:'', duration:'', rpe:'', avgHR:'', maxHR:'', distance:'', speed:'', notes:'', exercises:[{id:Date.now(),name:'',sets:'',reps:'',weight:'',customName:''}] };
+  workoutDraft={ id:null, paddler:curPaddler||'', date:new Date().toISOString().slice(0,10), category:'strength', activity:'', customActivity:'', duration:'', rpe:'', avgHR:'', maxHR:'', distance:'', speed:'', notes:'', exercises:[{id:Date.now(),name:'',sets:'',reps:'',weight:''}] };
   renderWorkout();
 };
 window.editWorkoutDraft=function(id){
   const e=workoutLog.find(x=>x.id===id);
   if(!e) return;
   workoutDraft=JSON.parse(JSON.stringify(e));
+  if(workoutDraft.activity==='__custom__') workoutDraft.activity=workoutDraft.customActivity||'';
   workoutDraft.customActivity=workoutDraft.customActivity||'';
   workoutDraft.avgHR=workoutDraft.avgHR||''; workoutDraft.maxHR=workoutDraft.maxHR||'';
   workoutDraft.distance=workoutDraft.distance||''; workoutDraft.speed=workoutDraft.speed||'';
-  if(!workoutDraft.exercises||!workoutDraft.exercises.length) workoutDraft.exercises=[{id:Date.now(),name:'',sets:'',reps:'',weight:'',customName:''}];
+  if(!workoutDraft.exercises||!workoutDraft.exercises.length) workoutDraft.exercises=[{id:Date.now(),name:'',sets:'',reps:'',weight:''}];
   workoutDraft.exercises.forEach(x=>{
     if(!x.id) x.id=Date.now()+Math.random();
-    if(x.name && x.name!=='__custom__' && !wexIncludes(workoutDraft.category,x.name)){
-      x.customName=x.name; x.name='__custom__';
-    } else if(!x.customName) x.customName='';
+    if(x.name==='__custom__') x.name=x.customName||'';
   });
-  if(WEXLIB[workoutDraft.category] && workoutDraft.activity && !WEXLIB[workoutDraft.category].includes(workoutDraft.activity)){
-    workoutDraft.customActivity=workoutDraft.activity;
-    workoutDraft.activity='__custom__';
-  }
   renderWorkout();
 };
 window.cancelWorkoutDraft=function(){ workoutDraft=null; renderWorkout(); };
 window.updateWDraftField=function(field,val){ if(workoutDraft) workoutDraft[field]=val; };
 window.addWExerciseRow=function(){
-  workoutDraft.exercises.push({id:Date.now()+Math.random(),name:'',sets:'',reps:'',weight:'',customName:''});
+  workoutDraft.exercises.push({id:Date.now()+Math.random(),name:'',sets:'',reps:'',weight:''});
   renderWorkout();
 };
 window.removeWExerciseRow=function(id){
   workoutDraft.exercises=workoutDraft.exercises.filter(x=>x.id!==id);
-  if(!workoutDraft.exercises.length) workoutDraft.exercises=[{id:Date.now(),name:'',sets:'',reps:'',weight:'',customName:''}];
+  if(!workoutDraft.exercises.length) workoutDraft.exercises=[{id:Date.now(),name:'',sets:'',reps:'',weight:''}];
   renderWorkout();
 };
 window.updateWExerciseField=function(id,field,val){
@@ -2083,7 +2105,7 @@ window.saveWorkoutEntry=function(){
   let activityName;
   if(WCAT_FIXED[workoutDraft.category]) activityName=WCAT_LABELS[workoutDraft.category];
   else if(workoutDraft.category==='other') activityName=workoutDraft.customActivity||'Other';
-  else activityName=workoutDraft.activity==='__custom__'?workoutDraft.customActivity:workoutDraft.activity;
+  else activityName=workoutDraft.activity||'';
   const entry={
     id:workoutDraft.id||(Date.now()+'_'+Math.random().toString(36).slice(2)),
     paddler:workoutDraft.paddler,
@@ -2098,7 +2120,7 @@ window.saveWorkoutEntry=function(){
     speed:workoutDraft.speed,
     notes:workoutDraft.notes,
     exercises:(workoutDraft.exercises||[])
-      .map(x=>({id:x.id,name:x.name==='__custom__'?(x.customName||''):x.name,sets:x.sets,reps:x.reps,weight:x.weight}))
+      .map(x=>({id:x.id,name:x.name||'',sets:x.sets,reps:x.reps,weight:x.weight}))
       .filter(x=>x.name||x.sets||x.reps||x.weight)
   };
   if(workoutDraft.id){
@@ -2131,16 +2153,11 @@ function workoutDraftForm(){
     <div><div class="sl">Paddler</div><div class="fv">${esc(d.paddler||'Select your name in the header first')}</div></div>`;
   let activitySection='';
   if(['cross','recovery'].includes(d.category)){
-    const opts=exerciseOptionsHTML(d.category,d.activity);
     activitySection=`
       <div><div class="sl">Activity</div>
-        <select class="stat-input" onchange="updateWDraftField('activity',this.value);renderWorkout()">
-          <option value="">— select —</option>
-          ${opts}
-          <option value="__custom__" ${d.activity==='__custom__'?'selected':''}>Other</option>
-        </select>
+        <input class="stat-input" type="text" list="wexlist_${d.category}" autocomplete="off" placeholder="Start typing… (or anything else)" value="${esc(d.activity)}" onchange="updateWDraftField('activity',this.value)">
+        ${wexDatalist(d.category)}
       </div>
-      ${d.activity==='__custom__'?`<div><div class="sl">Describe</div><input class="stat-input" placeholder="e.g. Beach volleyball…" value="${esc(d.customActivity)}" onchange="updateWDraftField('customActivity',this.value)"></div>`:''}
     `;
   } else if(d.category==='other'){
     activitySection=`<div><div class="sl">Describe</div><input class="stat-input" placeholder="What did you do?" value="${esc(d.customActivity)}" onchange="updateWDraftField('customActivity',this.value)"></div>`;
@@ -2153,13 +2170,7 @@ function workoutDraftForm(){
       <div><div class="sl">Avg Speed (mph)</div><input class="stat-input" type="text" value="${esc(d.speed)}" onchange="updateWDraftField('speed',this.value)"></div>
     </div>` : '';
   const exRows=(d.exercises||[]).map(ex=>{
-    const nameCell = ex.name==='__custom__'
-      ? `<input class="ex-input" placeholder="Exercise name" value="${esc(ex.customName||'')}" onchange="updateWExerciseField(${JSON.stringify(ex.id)},'customName',this.value)">`
-      : `<select class="ex-input" onchange="updateWExerciseField(${JSON.stringify(ex.id)},'name',this.value);renderWorkout()">
-          <option value="">— select —</option>
-          ${exerciseOptionsHTML(d.category,ex.name)}
-          <option value="__custom__">Other</option>
-        </select>`;
+    const nameCell = `<input class="ex-input" type="text" list="wexlist_${d.category}" autocomplete="off" placeholder="Start typing… (or anything else)" value="${esc(ex.name||'')}" onchange="updateWExerciseField(${JSON.stringify(ex.id)},'name',this.value)">`;
     return `<tr>
       <td>${nameCell}</td>
       <td style="width:60px"><input class="ex-input" placeholder="Sets" value="${esc(ex.sets)}" onchange="updateWExerciseField(${JSON.stringify(ex.id)},'sets',this.value)"></td>
@@ -2174,6 +2185,7 @@ function workoutDraftForm(){
       <thead><tr><th class="ttr-th">Exercise</th><th class="ttr-th">Sets</th><th class="ttr-th">Reps</th><th class="ttr-th">Weight</th><th class="ttr-th"></th></tr></thead>
       <tbody>${exRows}</tbody>
     </table>
+    ${wexDatalist(d.category)}
     <button class="ttr-add-btn" onclick="addWExerciseRow()" style="margin-bottom:10px">+ Add exercise</button>
     ${exerciseInstructionsBlock(d.exercises,d.category)}
   ` : '';
@@ -2208,6 +2220,7 @@ function workoutDraftForm(){
 }
 function workoutEntryRows(){
   let entries=[...workoutLog].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(mode!=='coach') entries=entries.filter(e=>!isTestKey(e.paddler));
   if(workoutFilter==='mine'&&curPaddler) entries=entries.filter(e=>e.paddler===curPaddler);
   if(!entries.length) return `<div class="wk-empty">No entries logged yet ${workoutFilter==='mine'?'for you':''}</div>`;
   const rows=entries.map(e=>{
@@ -2255,6 +2268,7 @@ function renderWorkout(){
         <button class="ttr-tab-btn${workoutFilter==='all'?' ttr-tab-on':''}" onclick="setWorkoutFilter('all')">Team Log</button>
         <button class="ttr-tab-btn${workoutFilter==='mine'?' ttr-tab-on':''}" onclick="setWorkoutFilter('mine')">My Log</button>
       </div>
+      ${workoutFilter==='mine'&&curPaddler?weeklyVolumeSection(curPaddler):''}
       ${workoutEntryRows()}
     </div>
   </div>`;
@@ -2274,6 +2288,58 @@ window.deleteFromSummary=function(id){
   scheduleSave('wlog');
   renderWorkoutSummary();
 };
+function weeklyVolumeTotals(paddlerKey){
+  const totals=W.map(()=>({min:0,mi:0,count:0}));
+  workoutLog.forEach(e=>{
+    if(e.paddler!==paddlerKey) return;
+    const wi=weekIndexForDate(e.date);
+    if(wi===null) return;
+    totals[wi].min+=parseFloat(e.duration)||0;
+    totals[wi].mi+=parseFloat(e.distance)||0;
+    totals[wi].count+=1;
+  });
+  return totals;
+}
+function fmtMin(min){
+  if(!min) return '—';
+  const h=Math.floor(min/60), m=Math.round(min%60);
+  return h?`${h}h ${m}m`:`${m} min`;
+}
+function weeklyVolumeSection(paddlerKey){
+  const totals=weeklyVolumeTotals(paddlerKey);
+  const maxMin=Math.max(1,...totals.map(t=>t.min));
+  const rows=W.map((w,wi)=>{
+    const t=totals[wi];
+    const barW=t.min?Math.max(4,Math.round((t.min/maxMin)*100)):0;
+    return `<tr class="pt-row">
+      <td class="pt-cell pt-wk">Wk ${w.n}</td>
+      <td class="pt-cell" style="font-size:10px;color:#888">${esc(w.dates)}</td>
+      <td class="pt-cell" style="font-weight:700">${fmtMin(t.min)}
+        ${t.min?`<div style="height:4px;background:#EEE;border-radius:2px;margin-top:3px;width:80px"><div style="height:4px;background:#4A90D9;border-radius:2px;width:${barW}%"></div></div>`:''}
+      </td>
+      <td class="pt-cell" style="font-weight:700">${t.mi?t.mi.toFixed(1)+' mi':'—'}</td>
+      <td class="pt-cell" style="color:${t.count?'#666':'#DDD'}">${t.count||'—'}</td>
+    </tr>`;
+  }).join('');
+  const seasonMin=totals.reduce((a,t)=>a+t.min,0);
+  const seasonMi=totals.reduce((a,t)=>a+t.mi,0);
+  const seasonCount=totals.reduce((a,t)=>a+t.count,0);
+  return `<div style="margin-bottom:16px">
+    <div class="chart-lbl" style="margin-bottom:8px">Weekly volume — outside workouts only</div>
+    <div style="overflow-x:auto">
+    <table class="pt-table">
+      <thead><tr><th class="pt-th">Wk</th><th class="pt-th">Dates</th><th class="pt-th">Time</th><th class="pt-th">Distance</th><th class="pt-th">Entries</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="pt-row" style="font-weight:700;background:#FAFAF8">
+        <td class="pt-cell" colspan="2">Season total</td>
+        <td class="pt-cell">${fmtMin(seasonMin)}</td>
+        <td class="pt-cell">${seasonMi?seasonMi.toFixed(1)+' mi':'—'}</td>
+        <td class="pt-cell">${seasonCount||'—'}</td>
+      </tr></tfoot>
+    </table>
+    </div>
+  </div>`;
+}
 function renderWorkoutSummary(){
   if(!curWSummaryPaddler && ROSTER.length) curWSummaryPaddler=rKey(ROSTER[0]);
   const sideItems=ROSTER.map(r=>{
@@ -2281,7 +2347,7 @@ function renderWorkoutSummary(){
     const cnt=workoutLog.filter(e=>e.paddler===k).length;
     const isSel=k===curWSummaryPaddler;
     return `<div class="pl-item${isSel?' pl-sel':''}" onclick="selWSummaryPaddler('${k}')">
-      <span class="pl-name">${r.f} ${r.l}</span>
+      <span class="pl-name">${r.f} ${r.l}${testBadge(r)}</span>
       <span class="pl-att" style="color:${cnt>0?'#27AE60':'#CCC'}">${cnt}</span>
     </div>`;
   }).join('');
@@ -2317,6 +2383,7 @@ function renderWorkoutSummary(){
     <div class="prof-main" style="padding:16px">
       <div class="prof-name-big" style="font-size:16px">${esc(pName)}</div>
       <div style="margin:8px 0 14px">${catSummary||'<span style="font-size:11px;color:#CCC;font-style:italic">No entries yet</span>'}</div>
+      ${weeklyVolumeSection(curWSummaryPaddler)}
       <div style="overflow-x:auto">
       <table class="pt-table">
         <thead><tr>
@@ -2346,15 +2413,15 @@ function seasonSummary(){
     const clr=pct>=80?'#27AE60':pct>=60?'#F39C12':'#E74C3C';
     const barW=Math.max(pct,2);
     return `<div class="sum-row">
-      <div class="sum-name">${r.f} ${r.l.charAt(0)}.</div>
+      <div class="sum-name">${r.f} ${r.l.charAt(0)}.${testBadge(r)}</div>
       <div class="sum-bar-track"><div class="sum-bar" style="width:${barW}%;background:${clr}"></div></div>
       <div class="sum-nums" style="color:${clr}">${tot}<span style="color:#BBB;font-weight:400">/${pos}</span></div>
       <div class="sum-pct" style="color:${clr}">${pct}%</div>
     </div>`;
   }).join('');
   const weekCols=W.map((w,wi)=>{
-    const cnt=ROSTER.reduce((acc,r)=>acc+['mon','thu','sat'].filter(d=>gPad(rKey(r),wi,d,'att')==='y').length,0);
-    const max=ROSTER.length*3;
+    const cnt=nonTestRoster().reduce((acc,r)=>acc+['mon','thu','sat'].filter(d=>gPad(rKey(r),wi,d,'att')==='y').length,0);
+    const max=nonTestRoster().length*3;
     const pct=Math.round((cnt/max)*100);
     const clr=pct>=80?'#27AE60':pct>=60?'#F39C12':'#E74C3C';
     const isCur=wi===curWk;
@@ -2364,8 +2431,8 @@ function seasonSummary(){
       <div class="wt-max">/${max}</div>
     </div>`;
   }).join('');
-  const totalAttended=ROSTER.reduce((a,r)=>a+W.reduce((b,_,wi)=>b+['mon','thu','sat'].filter(d=>gPad(rKey(r),wi,d,'att')==='y').length,0),0);
-  const totalPossible=ROSTER.length*W.length*3;
+  const totalAttended=nonTestRoster().reduce((a,r)=>a+W.reduce((b,_,wi)=>b+['mon','thu','sat'].filter(d=>gPad(rKey(r),wi,d,'att')==='y').length,0),0);
+  const totalPossible=nonTestRoster().length*W.length*3;
   const teamPct=totalPossible>0?Math.round((totalAttended/totalPossible)*100):0;
   const teamClr=teamPct>=80?'#27AE60':teamPct>=60?'#F39C12':'#E74C3C';
   return `<div class="season-panel">
@@ -2439,7 +2506,7 @@ function render(){
 }
 function initSelect(){
   const sel=document.getElementById('who-select');
-  ROSTER.forEach(r=>{
+  nonTestRoster().forEach(r=>{
     const k=rKey(r),opt=document.createElement('option');
     opt.value=k;opt.textContent=`${r.f} ${r.l}`;
     if(k===curPaddler) opt.selected=true;
